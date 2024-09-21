@@ -1,0 +1,145 @@
+created: 20220307084325354
+creator: Зурия
+modified: 20220307172336489
+modifier: Зурия
+module-type: macro
+tags: js
+title: $:/core/modules/macros/zemandala.js
+type: application/javascript
+
+/*\
+title: $:/core/modules/macros/zemandala.js
+type: application/javascript
+module-type: macro
+Macro to create webpage inside tiddlers
+\*/
+(function(){
+
+    /*jslint node: true, browser: true */
+    /*global $tw: false */
+    //"use strict";
+    
+    /*
+    Information about this macro
+    */
+    
+    exports.name = "zemandala";
+    
+    exports.params = [
+    
+        {name: "xtype"}
+    ];
+    
+    var zeImgUrl = "img/m/";
+    
+    /*
+    Run the macro
+    */
+    
+    exports.run = function(xtype) {
+    
+        //var curTidTitle = this.getVariable("currentTiddler");
+    
+        if(xtype == "gallery"){
+
+            let months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+
+            let jsonTiddler = $tw.wiki.getTiddler("Mandala.json");
+            let text = jsonTiddler.getFieldString("text");
+            var jsonArr = JSON.parse(text);
+            var html = '<$button popup="$:/state/PopupMandala" class="tc-btn-invisible ze-mandala-menu">{{$:/core/images/menu-button}}</$button>\
+            <$reveal type="popup" state="$:/state/PopupMandala">\
+            <div class="tc-drop-down ze-mandala-menu-dd">';
+    
+            var dates = "";
+            var datesLeft = "";
+            for (const date in jsonArr) {
+                var fDate = parseInt(date.substring(6, 8))+" "+months[parseInt(date.substring(4, 6))-1];
+                dates='<div class="mandala-item">\
+                <$button set="$:/state/mandala" setTo="'+date+'" class="tc-btn-invisible">'+fDate+'</$button>\
+                </div>'+dates;
+                datesLeft='<$button set="$:/state/mandala" rel="'+date+'" class=<<zemandala isactive>> setTo="'+date+'">'+fDate+'</$button>'+datesLeft;
+    
+    
+            }
+            html += dates;
+            
+            html += '</div></$reveal>';
+            html += '<$reveal type="popup" state="$:/state/PopupMandalaItem">\
+            <div class="tc-drop-down ze-mandala-popup">';
+            html +=  '<$button message="tm-copy-to-clipboard" class="tc-btn-invisible" param={{$:/state/PopupMandalaItem!!item}}>Сохранить ссылку</$button>';
+            html += '<img src={{$:/state/PopupMandalaItem!!item}} />';
+            html += '</div></$reveal>';
+    
+            html += '<$set name="zedate" value={{$:/state/mandala}}>';
+            html += '<div class="tc-tab-set tc-vertical">';
+            html += '<div class="tc-tab-buttons tc-vertical">';
+            html += datesLeft;
+            html += '</div>';
+            html += '<div class="tc-tab-divider tc-vertical"></div>';
+            html += '<div class="tc-tab-content tc-vertical">';
+    
+            html +=  '<$macrocall $name="zemandala" xtype=<<zedate>> />';
+    
+            html += '</div>';
+            html += '</div>';
+            html += '</$set>';
+    
+            return html;
+    
+        }else if(xtype == "isactive"){
+            return (this.attributes.rel == this.getVariable("zedate"))? "tc-tab-selected" : "";
+    
+        } else if(xtype == "calc"){
+    
+            function getImages(string) {
+            const imgRex = /<img.*?src='(.*?)'[^>]+>/g;
+            const images = [];
+                let img;
+                while ((img = imgRex.exec(string))) {
+                    images.push(img[1]);
+                }
+            return images;
+            }
+    
+            var filter = "[tag[Moon Mandala]!nsort[date]]";
+            var tids = $tw.wiki.filterTiddlers(filter, null);
+            var html = "{"
+    
+            for(var t=0; t<tids.length; t++) {
+    
+                if(t) html+=",\n";
+                let tiddler = $tw.wiki.getTiddler(tids[t]);
+                let date = tiddler.getFieldString("date");
+                let text = tiddler.getFieldString("text");
+                let images = getImages(text);
+                html+='"'+date+'" : ["'+images.join('", "').replaceAll("img/m/", "").replaceAll(".jpg", "")+'"]';
+    
+            }
+    
+            html+="}";
+            return "<pre>"+html+"</pre>";
+    
+        }else if(xtype && xtype.length == 8){
+    
+            var date = xtype;
+    
+            let jsonTiddler = $tw.wiki.getTiddler("Mandala.json");
+            let text = jsonTiddler.getFieldString("text");
+            var jsonArr = JSON.parse(text);
+            var html = ''; //'<$reveal type="match" state="$:/state/mandala" text="'+date+'">';
+            html+= "<ul class='ja_mandala' rel='"+date+"'>";
+            var imgs = jsonArr[date];
+            for (var i in imgs){
+                imgreal = (imgs[i].indexOf('.') !== -1)? imgs[i] : imgs[i]+".jpg";
+                html+="<li><$button popup='$:/state/PopupMandalaItem' class='tc-btn-invisible' tag='a' ><$action-setfield $tiddler='$:/state/PopupMandalaItem' item='"+zeImgUrl+imgreal+"' /><img src='"+zeImgUrl+imgreal+"' /></$button></li>";
+            }
+    
+            html+= "</ul>";
+            //html+= "</$reveal>";
+            return html;
+        }else{
+            return zeImgUrl;
+        }
+    }
+})();
